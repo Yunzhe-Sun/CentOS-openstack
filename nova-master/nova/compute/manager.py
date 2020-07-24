@@ -874,7 +874,7 @@ class ComputeManager(manager.Manager):
         """This call passes straight through to the virtualization driver."""
         return self.driver.refresh_provider_fw_rules()
 
-    def _get_instance_nw_info(self, context, instance, use_slave=False):
+    def _get_instance_nw_info(self, context, instance, use_subordinate=False):
         """Get a list of dictionaries of network data of an instance."""
         if (not hasattr(instance, 'system_metadata') or
                 len(instance['system_metadata']) == 0):
@@ -885,7 +885,7 @@ class ComputeManager(manager.Manager):
             # succeed.
             instance = instance_obj.Instance.get_by_uuid(context,
                                                          instance['uuid'],
-                                                         use_slave=use_slave)
+                                                         use_subordinate=use_subordinate)
 
         network_info = self.network_api.get_instance_nw_info(context,
                                                              instance)
@@ -4461,14 +4461,14 @@ class ComputeManager(manager.Manager):
                     instance = instance_obj.Instance.get_by_uuid(
                         context, instance_uuids.pop(0),
                         expected_attrs=['system_metadata'],
-                        use_slave=True)
+                        use_subordinate=True)
                 except exception.InstanceNotFound:
                     # Instance is gone.  Try to grab another.
                     continue
             else:
                 # No more in our copy of uuids.  Pull from the DB.
                 db_instances = instance_obj.InstanceList.get_by_host(
-                    context, self.host, expected_attrs=[], use_slave=True)
+                    context, self.host, expected_attrs=[], use_subordinate=True)
                 if not db_instances:
                     # None.. just return.
                     return
@@ -4480,7 +4480,7 @@ class ComputeManager(manager.Manager):
         try:
             # Call to network API to get instance info.. this will
             # force an update to the instance's info_cache
-            self._get_instance_nw_info(context, instance, use_slave=True)
+            self._get_instance_nw_info(context, instance, use_subordinate=True)
             LOG.debug(_('Updated the info_cache for instance'),
                       instance=instance)
         except Exception:
@@ -4492,7 +4492,7 @@ class ComputeManager(manager.Manager):
             filters = {'task_state': task_states.REBOOTING,
                        'host': self.host}
             rebooting = instance_obj.InstanceList.get_by_filters(
-                context, filters, expected_attrs=[], use_slave=True)
+                context, filters, expected_attrs=[], use_subordinate=True)
 
             to_poll = []
             for instance in rebooting:
@@ -4508,7 +4508,7 @@ class ComputeManager(manager.Manager):
             filters = {'vm_state': vm_states.RESCUED,
                        'host': self.host}
             rescued_instances = self.conductor_api.instance_get_all_by_filters(
-                context, filters, columns_to_join=[], use_slave=True)
+                context, filters, columns_to_join=[], use_subordinate=True)
 
             to_unrescue = []
             for instance in rescued_instances:
@@ -4527,7 +4527,7 @@ class ComputeManager(manager.Manager):
         mig_list_cls = migration_obj.MigrationList
         migrations = mig_list_cls.get_unconfirmed_by_dest_compute(
                 context, CONF.resize_confirm_window, self.host,
-                use_slave=True)
+                use_subordinate=True)
 
         migrations_info = dict(migration_count=len(migrations),
                 confirm_window=CONF.resize_confirm_window)
@@ -4555,7 +4555,7 @@ class ComputeManager(manager.Manager):
             try:
                 instance = instance_obj.Instance.get_by_uuid(context,
                             instance_uuid, expected_attrs=expected_attrs,
-                            use_slave=True)
+                            use_subordinate=True)
             except exception.InstanceNotFound:
                 reason = (_("Instance %s not found") %
                           instance_uuid)
@@ -4592,7 +4592,7 @@ class ComputeManager(manager.Manager):
                    'host': self.host}
         shelved_instances = instance_obj.InstanceList.get_by_filters(
             context, filters=filters, expected_attrs=['system_metadata'],
-            use_slave=True)
+            use_subordinate=True)
 
         to_gc = []
         for instance in shelved_instances:
@@ -4805,7 +4805,7 @@ class ComputeManager(manager.Manager):
         """
         db_instances = instance_obj.InstanceList.get_by_host(context,
                                                              self.host,
-                                                             use_slave=True)
+                                                             use_subordinate=True)
 
         num_vm_instances = self.driver.get_num_instances()
         num_db_instances = len(db_instances)
@@ -4834,7 +4834,7 @@ class ComputeManager(manager.Manager):
                     self._sync_instance_power_state(context,
                                                     db_instance,
                                                     vm_power_state,
-                                                    use_slave=True)
+                                                    use_subordinate=True)
                 except exception.InstanceNotFound:
                     # NOTE(hanlind): If the instance gets deleted during sync,
                     # silently ignore and move on to next instance.
@@ -4845,7 +4845,7 @@ class ComputeManager(manager.Manager):
                                 instance=db_instance)
 
     def _sync_instance_power_state(self, context, db_instance, vm_power_state,
-                                   use_slave=False):
+                                   use_subordinate=False):
         """Align instance power state between the database and hypervisor.
 
         If the instance is not found on the hypervisor, but is in the database,
@@ -4854,7 +4854,7 @@ class ComputeManager(manager.Manager):
 
         # We re-query the DB to get the latest instance info to minimize
         # (not eliminate) race condition.
-        db_instance.refresh(use_slave=use_slave)
+        db_instance.refresh(use_subordinate=use_subordinate)
         db_power_state = db_instance.power_state
         vm_state = db_instance.vm_state
 
@@ -4981,7 +4981,7 @@ class ComputeManager(manager.Manager):
         instances = instance_obj.InstanceList.get_by_filters(
             context, filters,
             expected_attrs=instance_obj.INSTANCE_DEFAULT_FIELDS,
-            use_slave=True)
+            use_subordinate=True)
         for instance in instances:
             if self._deleted_old_enough(instance, interval):
                 capi = self.conductor_api
@@ -5163,11 +5163,11 @@ class ComputeManager(manager.Manager):
 
     @aggregate_object_compat
     @wrap_exception()
-    def add_aggregate_host(self, context, aggregate, host, slave_info):
+    def add_aggregate_host(self, context, aggregate, host, subordinate_info):
         """Notify hypervisor of change (for hypervisor pools)."""
         try:
             self.driver.add_to_aggregate(context, aggregate, host,
-                                         slave_info=slave_info)
+                                         subordinate_info=subordinate_info)
         except NotImplementedError:
             LOG.debug(_('Hypervisor driver does not support '
                         'add_aggregate_host'))
@@ -5180,11 +5180,11 @@ class ComputeManager(manager.Manager):
 
     @aggregate_object_compat
     @wrap_exception()
-    def remove_aggregate_host(self, context, host, slave_info, aggregate):
+    def remove_aggregate_host(self, context, host, subordinate_info, aggregate):
         """Removes a host from a physical hypervisor pool."""
         try:
             self.driver.remove_from_aggregate(context, aggregate, host,
-                                              slave_info=slave_info)
+                                              subordinate_info=subordinate_info)
         except NotImplementedError:
             LOG.debug(_('Hypervisor driver does not support '
                         'remove_aggregate_host'))

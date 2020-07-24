@@ -429,13 +429,13 @@ class API(base.Base):
 
     @refresh_cache
     def get_instance_nw_info(self, context, instance, networks=None,
-                             use_slave=False):
+                             use_subordinate=False):
         """Return network information for specified instance
            and update cache.
         """
-        # NOTE(geekinutah): It would be nice if use_slave had us call
-        #                   special APIs that pummeled slaves instead of
-        #                   the master. For now we just ignore this arg.
+        # NOTE(geekinutah): It would be nice if use_subordinate had us call
+        #                   special APIs that pummeled subordinates instead of
+        #                   the main. For now we just ignore this arg.
         result = self._get_instance_nw_info(context, instance, networks)
         return result
 
