@@ -467,7 +467,7 @@ class ServerActionsControllerTest(test.TestCase):
 
     def test_rebuild_server_not_found(self):
         def server_not_found(self, instance_id,
-                             columns_to_join=None, use_slave=False):
+                             columns_to_join=None, use_subordinate=False):
             raise exception.InstanceNotFound(instance_id=instance_id)
         self.stubs.Set(db, 'instance_get_by_uuid', server_not_found)
 

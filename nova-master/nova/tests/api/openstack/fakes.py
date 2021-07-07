@@ -440,7 +440,7 @@ def get_fake_uuid(token=0):
 
 
 def fake_instance_get(**kwargs):
-    def _return_server(context, uuid, columns_to_join=None, use_slave=False):
+    def _return_server(context, uuid, columns_to_join=None, use_subordinate=False):
         return stub_instance(1, **kwargs)
     return _return_server
 
@@ -463,8 +463,8 @@ def fake_instance_get_all_by_filters(num_servers=5, **kwargs):
         if 'columns_to_join' in kwargs:
             kwargs.pop('columns_to_join')
 
-        if 'use_slave' in kwargs:
-            kwargs.pop('use_slave')
+        if 'use_subordinate' in kwargs:
+            kwargs.pop('use_subordinate')
 
         for i in xrange(num_servers):
             uuid = get_fake_uuid(i)

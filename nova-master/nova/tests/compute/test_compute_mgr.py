@@ -161,7 +161,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             context.get_admin_context().AndReturn(fake_context)
             db.instance_get_all_by_host(
                     fake_context, our_host, columns_to_join=['info_cache'],
-                    use_slave=False
+                    use_subordinate=False
                     ).AndReturn(startup_instances)
             if defer_iptables_apply:
                 self.compute.driver.filter_defer_apply_on()
@@ -228,7 +228,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         context.get_admin_context().AndReturn(fake_context)
         db.instance_get_all_by_host(fake_context, our_host,
                                     columns_to_join=['info_cache'],
-                                    use_slave=False
+                                    use_subordinate=False
                                     ).AndReturn([])
         self.compute.init_virt_events()
 
@@ -427,7 +427,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                           inst in driver_instances]},
                 'created_at', 'desc', columns_to_join=None,
                 limit=None, marker=None,
-                use_slave=False).AndReturn(
+                use_subordinate=False).AndReturn(
                         driver_instances)
 
         self.mox.ReplayAll()
@@ -468,7 +468,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                 fake_context, filters,
                 'created_at', 'desc', columns_to_join=None,
                 limit=None, marker=None,
-                use_slave=False).AndReturn(all_instances)
+                use_subordinate=False).AndReturn(all_instances)
 
         self.mox.ReplayAll()
 
@@ -510,7 +510,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
     def test_sync_instance_power_state_match(self):
         instance = self._get_sync_instance(power_state.RUNNING,
                                            vm_states.ACTIVE)
-        instance.refresh(use_slave=False)
+        instance.refresh(use_subordinate=False)
         self.mox.ReplayAll()
         self.compute._sync_instance_power_state(self.context, instance,
                                                 power_state.RUNNING)
@@ -518,7 +518,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
     def test_sync_instance_power_state_running_stopped(self):
         instance = self._get_sync_instance(power_state.RUNNING,
                                            vm_states.ACTIVE)
-        instance.refresh(use_slave=False)
+        instance.refresh(use_subordinate=False)
         instance.save()
         self.mox.ReplayAll()
         self.compute._sync_instance_power_state(self.context, instance,
@@ -528,7 +528,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
     def _test_sync_to_stop(self, power_state, vm_state, driver_power_state,
                            stop=True, force=False):
         instance = self._get_sync_instance(power_state, vm_state)
-        instance.refresh(use_slave=False)
+        instance.refresh(use_subordinate=False)
         instance.save()
         self.mox.StubOutWithMock(self.compute.compute_api, 'stop')
         self.mox.StubOutWithMock(self.compute.compute_api, 'force_stop')
